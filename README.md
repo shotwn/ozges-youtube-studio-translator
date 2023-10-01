@@ -1,4 +1,7 @@
-# Ozge's Youtube Studio Translator
+# Özge's Youtube Studio Translator
+<div style="width: 100%; text-align: center">
+  <img src="screenshots/sc1.png" style="width: 100%; max-width: 640px; margin: auto" />
+</div>
 
 ## What is this?
 This is a Tempermonkey script that translates the title and description of a video in Youtube Studio to a language of your choice. It uses Google Translate API to do the translation. It is useful if you are a Youtube content creator and want to translate your video titles and descriptions to other languages.
