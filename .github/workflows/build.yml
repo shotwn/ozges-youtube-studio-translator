@@ -1,0 +1,35 @@
+name: Build it for using with Tempermonkey
+
+on:
+  push:
+    branches:
+      - main
+    tags:
+      - '**'
+jobs:
+  build_chrome_extension:
+    runs-on: ubuntu-latest
+    steps:
+    # Checkout the repo
+    - uses: actions/checkout@v3
+
+    #  Merge 3 files to be installed as a single file
+    - name: Merge 3 files into 1
+      run: |
+        cat src/tempermonkey-header.js src/supported-languages.js src/main.js > dist/tempermonkey-userscript.js
+
+        # Uplaod file to artifacts
+    - name: Upload file to artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: tempermonkey-userscript.js
+        path: dist/tempermonkey-userscript.js
+
+    # Upload the file to the release if it is a tag
+    - name: Release with latest tag
+      uses: softprops/action-gh-release@v1
+      if: ${{startsWith(github.ref, 'refs/tags/') }}
+      with:
+        files: dist/tempermonkey-userscript.js
+        tag_name: ${{ github.ref }}
+        token: ${{ secrets.GITHUB_TOKEN }}
