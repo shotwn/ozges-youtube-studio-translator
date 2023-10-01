@@ -1,9 +1,9 @@
 # Özge's Youtube Studio Translator
 
 <div style="width: 100%; text-align: center">
-  <picture style="width: 100%;>
-    <img src="logo.png" style="width: 100%; max-width: 380px; margin: auto" />
-  </picture>
+  <p align="center">
+    <img src="logo.png" style="width: 100%; max-width: 380px; margin: auto" width="360" />
+  </p>
   <br>
   <img src="https://img.shields.io/badge/vanilla-javascript-yellow" />
   <img src="https://img.shields.io/badge/old_school-hypertext-blue" />
