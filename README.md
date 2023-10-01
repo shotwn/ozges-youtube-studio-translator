@@ -1,6 +1,13 @@
 # Özge's Youtube Studio Translator
+
 <div style="width: 100%; text-align: center">
-  <img src="screenshots/sc1.png" style="width: 100%; max-width: 640px; margin: auto" />
+  <img src="logo.png" style="width: 100%; max-width: 640px; margin: auto" /><br>
+  <img src="https://img.shields.io/badge/vanilla-javascript-yellow" />
+  <img src="https://img.shields.io/badge/old_school-hypertext-blue" />
+  <img src="https://img.shields.io/badge/tempermonkey-v4.19.0+-orange" />
+  <img src="https://img.shields.io/badge/google_translate_api-v2-green" />
+  <img src="https://img.shields.io/badge/google_api_key-required-red" />
+  <img src="https://img.shields.io/badge/chrome-v117.0.5938.92+-green" />
 </div>
 
 ## What is this?
@@ -22,3 +29,17 @@ This is a Tempermonkey script that translates the title and description of a vid
 
 ## Need it as a Chrome Extension?
 If you want to use this script as a Chrome extension, please leave a request in the [issues](https://github.com/shotwn/Ozges-Youtube-Studio-Translator/issues) section.
+
+## Screenshots
+<div style="width: 100%; text-align: center">
+  <img src="screenshots/sc1.png" style="width: 100%; max-width: 640px; margin: auto" />
+</div>
+
+### Credits
+- Logo
+  - Bing Chat with GPT-4
+  - DALL-E
+  - Slight touch of Photoshop
+  - Microsoft Designer
+- Name
+  - I made it for my sister Özge, 🤷‍♂️.
