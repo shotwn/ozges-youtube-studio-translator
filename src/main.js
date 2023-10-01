@@ -289,10 +289,11 @@ class InputTranslator {
   translationRequest (toTranslate) {
     return new Promise((resolve, reject) => {
       const data = {
-        "q": toTranslate,
-        "target": this.toLanguage,
+        q: toTranslate,
+        target: this.toLanguage,
+        format: 'text', // We need text to preserve new lines in YouTube's input.
         // Do not send source language if it is auto.
-        "source": this.fromLanguage === 'auto' ? undefined : this.fromLanguage,
+        source: this.fromLanguage === 'auto' ? undefined : this.fromLanguage,
       }
 
       // Bind auto language option element to be available in translation request.
@@ -377,8 +378,12 @@ class InputTranslator {
         this.showAlertMessage(err)
       }
     }
+    
+    // Update output element
+    // Replace new lines with <br> for better readability in HTML.
+    this.outputElement.innerHTML = translated ? translated.replace(/(?:\r\n|\r|\n)/g, '<br>') : '🤷‍♂️ No translation found.'
 
-    this.outputElement.innerHTML = translated ? translated.replace(/\n/g, '<br>') : '🤷‍♂️ No translation found.'
+    // Since we had overridden the output, mark loading indicator emoji hidden
     this.loadingIsShown = false
   }
 
