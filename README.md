@@ -1,7 +1,10 @@
 # Özge's Youtube Studio Translator
 
 <div style="width: 100%; text-align: center">
-  <img src="logo.png" style="width: 100%; max-width: 380px; margin: auto" /><br>
+  <picture style="width: 100%;>
+    <img src="logo.png" style="width: 100%; max-width: 380px; margin: auto" />
+  </picture>
+  <br>
   <img src="https://img.shields.io/badge/vanilla-javascript-yellow" />
   <img src="https://img.shields.io/badge/old_school-hypertext-blue" />
   <img src="https://img.shields.io/badge/tempermonkey-v4.19.0+-orange" />
