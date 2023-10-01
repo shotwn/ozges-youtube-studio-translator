@@ -33,4 +33,4 @@ jobs:
       with:
         files: dist/tempermonkey-userscript.js
         tag_name: ${{ github.ref }}
-        token: ${{ secrets.GITHUB_TOKEN }}
+        token: ${{ secrets.PAT }}
