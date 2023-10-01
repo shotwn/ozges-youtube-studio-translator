@@ -11,9 +11,13 @@ This is a Tempermonkey script that translates the title and description of a vid
 2. Install Tempermonkey extension for your browser from [here](https://chrome.google.com/webstore/detail/tampermonkey/dhdgffkkebhmkfjojejmpbldmpobfkfo).
 3. Click on the Tempermonkey icon and select "Dashboard"
 4. Click on the "Utilities" tab
-5. Click on "Import from File" and select the script file you downloaded in step 1.
+5. Find "Import from File", click on "Choose File" and select the script file you downloaded in step 1.
 6. Click on "Install" button.
-7. Done! You can now use the script. You can check if it is working by going to [Youtube Studio](https://studio.youtube.com/) and clicking on any video. You should see translation boxes under the video title and description.
+7. Find GOOGLE_API_KEY config in the script and replace it with your own Google API key. You can get a Google API key by following the instructions [here](https://cloud.google.com/docs/authentication/api-keys).
+   ```javascript 
+   const GOOGLE_API_KEY = '<your-api-key>'; // Example: const GOOGLE_API_KEY = 'AIzaSyD-9VgTcZdYqZjrZsLuvL4Z9gqz5dKvHzE'
+   ```
+8. Done! You can now use the script. You can check if it is working by going to [Youtube Studio](https://studio.youtube.com/) and clicking on any video. You should see translation boxes under the video title and description.
 
 ## Need it as a Chrome Extension?
 If you want to use this script as a Chrome extension, please leave a request in the [issues](https://github.com/shotwn/Ozges-Youtube-Studio-Translator/issues) section.
