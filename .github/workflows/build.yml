@@ -17,7 +17,7 @@ jobs:
     - name: Merge 3 files into 1
       run: |
         mkdir -p dist && 
-        cat src/tempermonkey-header.js src/supported-languages.js src/main.js > dist/tempermonkey-userscript.js
+        cat src/tempermonkey-header.js src/config.js src/supported-languages.js src/main.js > dist/tempermonkey-userscript.js
 
         # Uplaod file to artifacts
     - name: Upload file to artifacts

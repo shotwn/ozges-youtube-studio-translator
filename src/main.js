@@ -1,6 +1,3 @@
-// Enter your translation enabled Google Cloud API key here.
-const GOOGLE_API_KEY = '<your-api-key>' // https://cloud.google.com/translate/docs/setup
-
 // Required to inject HTML after sanitation
 // https://developer.mozilla.org/en-US/docs/Web/API/TrustedTypePolicyFactory/createPolicy
 if (window.trustedTypes && window.trustedTypes.createPolicy) {
