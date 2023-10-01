@@ -1,16 +1,16 @@
 # Özge's Youtube Studio Translator
 
 <div style="width: 100%; text-align: center">
-  <p align="center">
-    <img src="logo.png" style="width: 100%; max-width: 380px; margin: auto" width="360" />
+  <p align="center" style="margin-bottom: 0">
+    <img src="logo.png" style="margin: auto" width="360" />
+    <br>
+    <img src="https://img.shields.io/badge/vanilla-javascript-yellow" />
+    <img src="https://img.shields.io/badge/old_school-hypertext-blue" />
+    <img src="https://img.shields.io/badge/tempermonkey-v4.19.0+-orange" />
+    <img src="https://img.shields.io/badge/translate_api-v2-green" />
+    <img src="https://img.shields.io/badge/google_api_key-required-red" />
+    <img src="https://img.shields.io/badge/chrome-v117+-green" />
   </p>
-  <br>
-  <img src="https://img.shields.io/badge/vanilla-javascript-yellow" />
-  <img src="https://img.shields.io/badge/old_school-hypertext-blue" />
-  <img src="https://img.shields.io/badge/tempermonkey-v4.19.0+-orange" />
-  <img src="https://img.shields.io/badge/translate_api-v2-green" />
-  <img src="https://img.shields.io/badge/google_api_key-required-red" />
-  <img src="https://img.shields.io/badge/chrome-v117+-green" />
 </div>
 
 ## What is this?
