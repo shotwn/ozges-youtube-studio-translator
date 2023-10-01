@@ -7,7 +7,7 @@ on:
     tags:
       - '**'
 jobs:
-  build_chrome_extension:
+  build_tempermonkey_userscript:
     runs-on: ubuntu-latest
     steps:
     # Checkout the repo
