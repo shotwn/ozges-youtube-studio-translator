@@ -35,7 +35,7 @@ If you want to use this script as a Chrome extension, please leave a request in 
 
 ## Screenshots
 <div style="width: 100%; text-align: center">
-  <img src="screenshots/sc1.png" style="width: 100%; max-width: 640px; margin: auto" />
+  <img src="screenshots/oyt-preview.gif" style="width: 100%; max-width: 640px; margin: auto" />
 </div>
 
 ### Credits

@@ -10,7 +10,7 @@ if (window.trustedTypes && window.trustedTypes.createPolicy) {
 * Centralized debug.
 */
 function logDebug (message) {
-  console.log('OYT: ', message)
+  console.log('📚 OYT: ', message)
 }
 
 /**
@@ -29,11 +29,22 @@ class InputTranslator {
       inputSelector: null,
       debounce: 1000,
       renderToParentElementDepth: 4,
-      elementDataGetter: element => element.innerHTML,
+      inputElementDataGetter: element => element.innerHTML,
+      inputElementDataSetter: (element, data) => {
+        element.innerHTML = data
+        // Event is necessary to trigger YouTube's internal logic.
+        element.dispatchEvent(new InputEvent('input', {data: data}))
+      },
       defaultFromLanguage: 'auto',
       defaultToLanguage: 'tr',
       autoLanguageLabel: 'Detect Language',
       alertElementWrapper: null,
+      maxRetryCount: 10,
+      outputWrapperStyle: {}, // CSS style for output wrapper. Use object notation.
+      translatorRemovedEvent: null,
+      autoPickTargetSelector: null,
+      autoCloneSourceSelector: null,
+      autoCloneSourceDataGetter: element => element.innerHTML,
       ...options
     }
 
@@ -55,8 +66,34 @@ class InputTranslator {
     this.fromLanguageSelector = null
     this.toLanguageSelector = null
     this.autoLanguageOptionElement = null
+    this.initiationHref = window.location.href
 
+    logDebug('A New Instance of InputTranslator initiated.')
     this.init()
+  }
+
+  /**
+   * Find first visible element with given selector.
+   */
+  async findFirstVisibleElement (selector) {
+    const allCandidates = document.querySelectorAll(selector)
+    
+    // Find the input element that is visible.
+    // Limit the search to 50 elements. This is to prevent infinite loop.
+    let count = 0
+    for (const candidate of allCandidates) {
+      if (candidate.offsetParent !== null) {
+        return candidate
+      }
+
+      if (count > 50) {
+        break
+      }
+
+      count++
+    }
+
+    return null
   }
 
   /**
@@ -68,7 +105,8 @@ class InputTranslator {
       throw Error('Input selector is not defined.')
     }
 
-    this.inputElement = document.querySelector(this.options.inputSelector)
+    this.inputElement = await this.findFirstVisibleElement(this.options.inputSelector)
+
     if (!this.inputElement) {
       throw Error(`Input element not found. Selector: ${this.options.inputSelector}`)
     }
@@ -168,6 +206,9 @@ class InputTranslator {
     // Most outer wrapper
     const outputWrapper = document.createElement('div')
 
+    // Output wrapper style
+    Object.assign(outputWrapper.style, this.options.outputWrapperStyle)
+
     // Top wrapper
     const languageSelectorsWrapper = document.createElement('div')
     languageSelectorsWrapper.style = 'display: flex; justify-content: center;'
@@ -181,7 +222,8 @@ class InputTranslator {
       ' font-size: 12px',
       ' color: var(--ytcp-text-secondary)',
       ' padding-bottom: 5px',
-      ' display: block'
+      ' display: block',
+      ' flex-grow: 1'
     ].join(';')
 
     // Language selectors
@@ -212,8 +254,12 @@ class InputTranslator {
     this.fromLanguageSelector.style = langSelectorStyle
 
     const arrow = document.createElement('div')
-    arrow.innerHTML = '➤'
-    arrow.style = 'font-size: 16px; margin: 0px 10px 6px 10px;'
+    arrow.innerHTML = '↔'
+    arrow.style = 'font-size: 22px; margin: 0px 5px 6px 5px; color: var(--ytcp-call-to-action); cursor: pointer;'
+    arrow.class = 'style-scope ytcp-button'
+    arrow.addEventListener('click', () => {
+      this.swapLanguages()
+    })
 
     this.toLanguageSelector = this.createSelectForSupportedLanguages(event => {
       this.toLanguage = event.target.value
@@ -295,6 +341,12 @@ class InputTranslator {
         // Do not send source language if it is auto.
         source: this.fromLanguage === 'auto' ? undefined : this.fromLanguage,
       }
+      
+      // If source and target languages are the same, no need to make a request.
+      if (data.source === data.target) {
+        resolve(toTranslate)
+        return
+      }
 
       // Bind auto language option element to be available in translation request.
       const autoLanguageOptionElement = this.autoLanguageOptionElement
@@ -308,7 +360,7 @@ class InputTranslator {
           'X-goog-api-key': this.googleApiKey
         },
         data: JSON.stringify(data),
-        onload: function(response) {
+        onload: response => {
           // Check response status
           if (response.status !== 200) {
             // Default error message
@@ -343,6 +395,12 @@ class InputTranslator {
             
             // Update auto language option element
             autoLanguageOptionElement.innerHTML = `Detected: ${languageName}`
+
+            // Update source language if it was auto
+            // This is necessary because when swap languages is called, we need to know the source language.
+            if (this.fromLanguage === 'auto') {
+              this.fromLanguage = detectedLanguage
+            }
           } else if (autoLanguageOptionElement) {
             // Update auto language option element to default
             autoLanguageOptionElement.innerHTML = autoLanguageLabel
@@ -364,7 +422,7 @@ class InputTranslator {
    */
   async doTranslation () {
     // Get content to translate
-    const toTranslate = this.options.elementDataGetter(this.inputElement)
+    const toTranslate = this.options.inputElementDataGetter(this.inputElement)
 
     // Default translated text
     let translated = '🤷‍♂️ Waiting for content to translate...'
@@ -454,7 +512,6 @@ class InputTranslator {
       ].join(';')
       alertElementCloseButton.title = 'Close'
       alertElementCloseButton.addEventListener('click', () => {
-        console.log('close')
         alertModalElement.style.display = 'none'
       })
 
@@ -502,27 +559,173 @@ class InputTranslator {
   }
 
   /**
+   * Listen for DOM removed event.
+   * 
+   * This is required because YouTube re-renders the page even though the URL is the same.
+   * 
+   * NOTE: MutationObserver was tested but it doesn't work.
+   *       Because YouTube just hides the input element and its parent.
+   *       So MutationObserver doesn't detect the change.
+   */
+  async bindDomRemovedEventListener () {
+    const observer = new MutationObserver(async (mutations, observer) => {      
+      // https://stackoverflow.com/questions/19669786/check-if-element-is-visible-in-dom
+      if (!this.inputElement || !document.body.contains(this.inputElement) || this.inputElement.offsetParent === null) {
+        // Debug log
+        logDebug('Input element is removed from DOM.')
+
+        // Input element is removed from DOM. Remove all references.
+        await this.removeAllReferences()
+
+        // Trigger event
+        if (this.options.translatorRemovedEvent) {
+          this.options.translatorRemovedEvent()
+        }
+
+        // Disconnect observer.
+        observer.disconnect()
+      }
+      
+    })
+
+    observer.observe(document.body, { childList: true, subtree: true })
+  }
+
+  /**
+   * Remove all references to DOM elements.
+   * 
+   * Used to clean up while the class is being removed.
+   */
+  async removeAllReferences () {
+    this.isInitiated = false
+
+    if (this.inputElement) {
+      this.inputElement.oninput = null
+      this.inputElement = null
+    }
+
+    if (this.outputElement) {
+      this.outputElement.remove()
+      this.outputElement = null
+    }
+  }
+
+  /**
+   * Auto pick target language from a DOM element.
+   */
+  async autoPickTargetLanguage () {
+    // Check if auto language option is available
+    if (!this.options.autoPickTargetSelector) {
+      return
+    }
+
+    // Check if auto language element is available
+    const autoLanguagePickFromElement = await this.findFirstVisibleElement(this.options.autoPickTargetSelector)
+    if (!autoLanguagePickFromElement) {
+      return
+    }
+
+    // Get target language from DOM
+    const targetLanguage = autoLanguagePickFromElement.innerHTML
+
+    // Find language code from language name
+    const targetLanguageCode = googleTranslateSupportedLanguages.text.find(
+      language => language.language.toLowerCase() === targetLanguage.toLowerCase()
+    )?.code
+
+    // Update target language
+    if (targetLanguageCode) {
+      this.toLanguage = targetLanguageCode
+      logDebug(`Auto picked target language: ${targetLanguageCode}`)
+    }
+  }
+
+  /**
+   * Auto clone text from a DOM element to input element.
+   * 
+   * Uses inputElementDataSetter option to set the value.
+   * Uses autoCloneSourceSelector option to find the source element.
+   * Uses autoCloneSourceDataGetter option to get the value from source element.
+   */
+  async autoCloneToInput () {
+    // Check if auto clone source selector is available
+    if (!this.options.autoCloneSourceSelector) {
+      return
+    }
+
+    // Do not run if input element already has a value
+    const inputElementValue = this.options.inputElementDataGetter(this.inputElement)
+    if (inputElementValue !== '' && inputElementValue) {
+      return
+    }
+
+    // Check if auto clone source element is available
+    const autoCloneSourceElement = await this.findFirstVisibleElement(this.options.autoCloneSourceSelector)
+    if (!autoCloneSourceElement) {
+      return
+    }
+
+    // Get text from source element
+    const text = this.options.autoCloneSourceDataGetter(autoCloneSourceElement)
+
+    // Set text to input element
+    this.options.inputElementDataSetter(this.inputElement, text)
+  }
+
+  /**
+   * Swaps source and target languages and data in input and output elements.
+   */
+  async swapLanguages () {
+    // Swap languages
+    const tempLanguage = this.fromLanguage
+    this.fromLanguageSelector.value = this.toLanguage
+    this.fromLanguage = this.toLanguage
+    this.toLanguageSelector.value = tempLanguage
+    this.toLanguage = tempLanguage
+
+    // Swap data
+    const tempData = this.options.inputElementDataGetter(this.inputElement)
+    this.options.inputElementDataSetter(this.inputElement, this.outputElement.innerHTML)
+    this.outputElement.innerHTML = tempData
+
+    // inputElementDataSetter should trigger oninput event.
+    // So we don't need to do a translation request here.
+    // this.doTranslation()
+  }
+
+  /**
    * Initialize the translator.
    */
   async init (retryCount = 0) {
-    if (retryCount > 10) {
+    if (retryCount > this.options.maxRetryCount) {
       throw Error('Failed to initialize after 10 tries.')
+    }
+
+    if (this.initiationHref !== window.location.href) {
+      // Page changed. Abort.
+      return
     }
 
     try {
       await this.fetchInputElement()
       await this.rememberPersistentRuntimeValues()
+      await this.autoPickTargetLanguage()
+      await this.autoCloneToInput()
       await this.createOutputElement()
       await this.bindInputEvents()
+      await this.bindDomRemovedEventListener()
 
       // Do a translation request to fill the output element with something.
       // Timeout is required because the input element is not ready yet.
       setTimeout(() => {this.doTranslation()}, 200)
       this.isInitiated = true
+
+      logDebug('Translator successfully injected.')
     } catch (err) {
-      if (retryCount === 9) { // Last try
+      if (retryCount === (this.options.maxRetryCount - 1)) { // Last try
         logDebug(err)
       }
+
       setTimeout ( () => { this.init(retryCount + 1) }, 1000)
     }
   }
@@ -530,41 +733,116 @@ class InputTranslator {
 
 /**
 * Start main program logic.
+* @param {String} pageType: Page type. One of: 'video', 'translations'
 */
-async function bindElements () {
-  const titleTranslator = new InputTranslator(GOOGLE_API_KEY, {
-    inputSelector: 'div .style-scope .ytcp-social-suggestions-textbox #textbox',
-    persistanceId: 'title'
-  })
+async function bindElements (pageType = 'video', inputTranslatorOptions = {}) {
+  if (pageType === 'video') {
+    const titleTranslator = new InputTranslator(GOOGLE_API_KEY, {
+      ...inputTranslatorOptions,
+      inputSelector: 'div .style-scope .ytcp-social-suggestions-textbox #textbox',
+      persistanceId: 'title'
+    })
 
-  const descriptionTranslator = new InputTranslator(GOOGLE_API_KEY, {
-    inputSelector: '#description-textarea .style-scope .ytcp-social-suggestions-textbox #textbox',
-    persistanceId: 'description'
-  })
+    const descriptionTranslator = new InputTranslator(GOOGLE_API_KEY, {
+      ...inputTranslatorOptions,
+      inputSelector: '#description-textarea .style-scope .ytcp-social-suggestions-textbox #textbox',
+      persistanceId: 'description'
+    })
+  } else if (pageType === 'translations') {
+    const titleTranslator = new InputTranslator(GOOGLE_API_KEY, {
+      ...inputTranslatorOptions,
+      inputSelector: '#translated-title textarea',
+      persistanceId: 'title',
+      maxRetryCount: Infinity,
+      renderToParentElementDepth: 3,
+      inputElementDataGetter: element => element.value,
+      inputElementDataSetter: (element, data) => {
+        element.value = data
+        // Event is necessary to trigger YouTube's internal logic.
+        element.dispatchEvent(new InputEvent('input', {data: data}))
+      },
+      outputWrapperStyle: {
+        paddingRight: '25px',
+        paddingLeft: '25px',
+        paddingBottom: '5px'
+      },
+      autoPickTargetSelector: '.metadata-editor-translated .language-header.style-scope.ytgn-metadata-editor',
+      autoCloneSourceSelector: '#original-title textarea',
+      autoCloneSourceDataGetter: element => element.value,
+    })
+
+    const descriptionTranslator = new InputTranslator(GOOGLE_API_KEY, {
+      ...inputTranslatorOptions,
+      inputSelector: '#translated-description textarea',
+      persistanceId: 'description',
+      maxRetryCount: Infinity,
+      renderToParentElementDepth: 3,
+      inputElementDataGetter: element => element.value,
+      inputElementDataSetter: (element, data) => {
+        element.value = data
+        // Event is necessary to trigger YouTube's internal logic.
+        element.dispatchEvent(new InputEvent('input', {data: data}))
+      },
+      outputWrapperStyle: {
+        paddingRight: '25px',
+        paddingLeft: '25px',
+        paddingBottom: '5px'
+      },
+      autoPickTargetSelector: '.metadata-editor-translated .language-header.style-scope.ytgn-metadata-editor',
+      autoCloneSourceSelector: '#original-description textarea',
+      autoCloneSourceDataGetter: element => element.value,
+    })
+  }
 }
 
 
-
-(function() {
+function start() {
   'use strict';
   if (window.top !== window.self) {
     logDebug('In an iframe. Skipping.')
     return
   }
 
+  let currentPage;
+
+  const translatorRemovedEvent = () => {
+    /** Triggers when translator is removed or hidden from DOM.
+     *  Reset the current page so we can re-initiate a new translator.
+     * 
+     *  NOTE: Consideration was given for doing the re-initiation within InputTranslator class.
+     *        But resetting the entire runtime of the object ended up being messy.
+     *        So we just reset the current page and re-initiate the translator.
+     * 
+     *        In order to prevent leaks, InputTranslator class still cleans some references itself.
+     *        And then calls this event.
+     */
+    
+    currentPage = null
+  }
+
+  const translatorOptions = {
+    translatorRemovedEvent
+  }
+
   // Make sure when YouTube re-renders the page due navigation we re-bind the elements.
-  let currentPage = null
   setInterval(() => {
     if (currentPage !== window.location.href) {
       // Make sure page URL fits our pattern.
-      if (window.location.href.match(/https:\/\/studio\.youtube\.com\/video\/(.*)+\/edit/)) {
-        bindElements()
+      if (window.location.href.match(/https:\/\/studio\.youtube\.com\/video\/(.*)\/edit/)) {
+        bindElements('video', translatorOptions)
+      } else if (window.location.href.match(/https:\/\/studio\.youtube\.com\/video\/(.*)\/translations/)) {
+        bindElements('translations', translatorOptions)
       }
       
       // Update current page, so we don't re-bind elements.
       currentPage = window.location.href
     }
+
   }, 1000)
 
   logDebug('Translator initiated.')
-})();
+};
+
+// Start the program
+// start();
+window.addEventListener('load', start);
